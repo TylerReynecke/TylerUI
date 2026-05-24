@@ -15,12 +15,16 @@ interface DataGridProps<T> {
   columns: ColumnDef<T>[];
   data: T[];
   onDeleteSelected?: (selectedRows: T[]) => void;
+  borderless?: boolean;
+  showToolbar?: boolean;
 }
 
 export const AdvancedDataGrid = <T extends { id: string | number }>({
   columns,
   data,
-  onDeleteSelected
+  onDeleteSelected,
+  borderless = false,
+  showToolbar = true
 }: DataGridProps<T>) => {
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
@@ -123,7 +127,8 @@ export const AdvancedDataGrid = <T extends { id: string | number }>({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative' }}>
       
       {/* 1. TABLE TOOLBAR */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+      {showToolbar && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
         {/* Search */}
         <div style={{ display: 'flex', alignItems: 'center', background: 'var(--ui-panel-strong)', border: '1px solid var(--ui-line)', borderRadius: '14px', padding: '0 12px', width: '320px', height: '42px' }}>
           <Search size={16} style={{ color: 'var(--ui-muted)', marginRight: '8px' }} />
@@ -189,10 +194,10 @@ export const AdvancedDataGrid = <T extends { id: string | number }>({
             </div>
           )}
         </div>
-      </div>
+      )}
 
       {/* 2. ADVANCED DATA TABLE */}
-      <div style={{ border: '1px solid var(--ui-line)', borderRadius: 'var(--radius-lg)', background: 'var(--ui-panel-strong)', overflow: 'hidden', boxShadow: 'var(--ui-shadow-sm)' }}>
+      <div style={{ border: borderless ? 'none' : '1px solid var(--ui-line)', borderRadius: borderless ? '0' : 'var(--radius-lg)', background: borderless ? 'transparent' : 'var(--ui-panel-strong)', overflow: 'hidden', boxShadow: borderless ? 'none' : 'var(--ui-shadow-sm)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
           
           {/* Sticky Table Header */}
