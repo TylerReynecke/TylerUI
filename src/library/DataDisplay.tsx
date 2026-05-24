@@ -352,6 +352,8 @@ interface LogoProps {
   lightModeSrc?: string;
   darkModeSrc?: string;
   currentTheme?: 'light' | 'dark';
+  text1?: string;
+  text2?: string;
 }
 
 export const Logo: React.FC<LogoProps> = ({ 
@@ -362,7 +364,9 @@ export const Logo: React.FC<LogoProps> = ({
   hideShadow = false,
   lightModeSrc,
   darkModeSrc,
-  currentTheme
+  currentTheme,
+  text1 = 'TYLER',
+  text2 = 'UI'
 }) => {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
@@ -397,7 +401,7 @@ export const Logo: React.FC<LogoProps> = ({
       <div className={`logo-container ${className || ''}`} style={{ display: 'flex', alignItems: 'center', ...style }}>
         <img 
           src={imgSrc} 
-          alt="TYLERUI Logo" 
+          alt="Logo" 
           style={{ height: `${size}px`, width: 'auto', objectFit: 'contain' }} 
         />
       </div>
@@ -419,8 +423,8 @@ export const Logo: React.FC<LogoProps> = ({
         ...style
       }}
     >
-      <span style={{ color: 'var(--ui-primary)', fontSize: 'inherit', textShadow: hideShadow ? 'none' : '0 2px 10px rgba(0,0,0,0.3)' }}>TYLER</span>
-      <span style={{ color: coreColor, fontSize: 'inherit', textShadow: hideShadow ? 'none' : '0 2px 10px rgba(0,0,0,0.3)' }}>UI</span>
+      <span style={{ color: 'var(--ui-primary)', fontSize: 'inherit', textShadow: hideShadow ? 'none' : '0 2px 10px rgba(0,0,0,0.3)' }}>{text1}</span>
+      <span style={{ color: coreColor, fontSize: 'inherit', textShadow: hideShadow ? 'none' : '0 2px 10px rgba(0,0,0,0.3)' }}>{text2}</span>
     </div>
   );
 };
