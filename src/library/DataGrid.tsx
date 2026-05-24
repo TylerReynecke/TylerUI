@@ -9,26 +9,31 @@ interface ColumnDef<T> {
   header: string;
   accessorKey: keyof T;
   cell?: (row: T) => React.ReactNode;
+  visible?: boolean;
 }
 
 interface DataGridProps<T> {
   columns: ColumnDef<T>[];
   data: T[];
   onDeleteSelected?: (selectedRows: T[]) => void;
-  borderless?: boolean;
   showToolbar?: boolean;
+  borderless?: boolean;
+  onColumnsChange?: (columns: ColumnDef<T>[]) => void;
 }
 
 export const AdvancedDataGrid = <T extends { id: string | number }>({
   columns,
   data,
   onDeleteSelected,
+  showToolbar = true,
   borderless = false,
-  showToolbar = true
+  onColumnsChange
 }: DataGridProps<T>) => {
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(columns.map(c => String(c.header)));
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(
+    columns.filter(c => c.visible !== false).map(c => String(c.header))
+  );
   const [showColMenu, setShowColMenu] = useState(false);
   const [density, setDensity] = useState<'compact' | 'relaxed'>('relaxed');
 
@@ -43,6 +48,7 @@ export const AdvancedDataGrid = <T extends { id: string | number }>({
   // Sync columns updates from parent
   React.useEffect(() => {
     setGridColumns(columns);
+    setVisibleColumns(columns.filter(c => c.visible !== false).map(c => String(c.header)));
   }, [columns]);
 
   // Sync data updates from parent
@@ -82,6 +88,10 @@ export const AdvancedDataGrid = <T extends { id: string | number }>({
       const [draggedCol] = reordered.splice(draggedIdx, 1);
       reordered.splice(targetIdx, 0, draggedCol);
       setGridColumns(reordered);
+      
+      if (onColumnsChange) {
+        onColumnsChange(reordered);
+      }
     }
     setDraggedColId(null);
     setDragOverColId(null);
@@ -129,76 +139,92 @@ export const AdvancedDataGrid = <T extends { id: string | number }>({
       {/* 1. TABLE TOOLBAR */}
       {showToolbar && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-        {/* Search */}
-        <div style={{ display: 'flex', alignItems: 'center', background: 'var(--ui-panel-strong)', border: '1px solid var(--ui-line)', borderRadius: '14px', padding: '0 12px', width: '320px', height: '42px' }}>
-          <Search size={16} style={{ color: 'var(--ui-muted)', marginRight: '8px' }} />
-          <input
-            style={{ border: 0, outline: 0, background: 'transparent', width: '100%', fontSize: '13px', color: 'var(--ui-text)' }}
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search records in real-time..."
-          />
-        </div>
+          {/* Search */}
+          <div style={{ display: 'flex', alignItems: 'center', background: 'var(--ui-panel-strong)', border: '1px solid var(--ui-line)', borderRadius: '14px', padding: '0 12px', width: '320px', height: '42px' }}>
+            <Search size={16} style={{ color: 'var(--ui-muted)', marginRight: '8px' }} />
+            <input
+              style={{ border: 0, outline: 0, background: 'transparent', width: '100%', fontSize: '13px', color: 'var(--ui-text)' }}
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search records in real-time..."
+            />
+          </div>
 
-        {/* Filters and Visibility Controls */}
-        <div style={{ display: 'flex', gap: '8px', position: 'relative' }}>
-          <button 
-            className="btn outline"
-            onClick={() => setDensity(d => d === 'relaxed' ? 'compact' : 'relaxed')}
-            style={{ padding: '8px 12px', fontSize: '12px', height: '42px' }}
-          >
-            Density: {density === 'relaxed' ? 'Relaxed' : 'Compact'}
-          </button>
-          
-          <button 
-            className="btn outline"
-            onClick={() => setShowColMenu(!showColMenu)}
-            style={{ padding: '8px 12px', fontSize: '12px', height: '42px', display: 'flex', gap: '6px' }}
-          >
-            Columns <ChevronDown size={14} />
-          </button>
+          {/* Filters and Visibility Controls */}
+          <div style={{ display: 'flex', gap: '8px', position: 'relative' }}>
+            <button 
+              className="btn outline"
+              onClick={() => setDensity(d => d === 'relaxed' ? 'compact' : 'relaxed')}
+              style={{ padding: '8px 12px', fontSize: '12px', height: '42px' }}
+            >
+              Density: {density === 'relaxed' ? 'Relaxed' : 'Compact'}
+            </button>
+            
+            <button 
+              className="btn outline"
+              onClick={() => setShowColMenu(!showColMenu)}
+              style={{ padding: '8px 12px', fontSize: '12px', height: '42px', display: 'flex', gap: '6px' }}
+            >
+              Columns <ChevronDown size={14} />
+            </button>
 
-          {showColMenu && (
-            <div style={{
-              position: 'absolute',
-              top: '110%',
-              right: 0,
-              background: 'var(--ui-panel-pure)',
-              border: '1px solid var(--ui-line)',
-              borderRadius: '12px',
-              padding: '12px',
-              boxShadow: 'var(--ui-shadow-md)',
-              zIndex: 100,
-              width: '180px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '8px'
-            }}>
-              {columns.map(c => {
-                const headerName = String(c.header);
-                const active = visibleColumns.includes(headerName);
-                return (
-                  <label key={headerName} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer', fontWeight: 600 }}>
-                    <input
-                      type="checkbox"
-                      checked={active}
+            {showColMenu && (
+              <div style={{
+                position: 'absolute',
+                top: '110%',
+                right: 0,
+                background: 'var(--ui-panel-pure)',
+                border: '1px solid var(--ui-line)',
+                borderRadius: '12px',
+                padding: '12px',
+                boxShadow: 'var(--ui-shadow-md)',
+                zIndex: 100,
+                width: '180px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px'
+              }}>
+                {columns.map(c => {
+                  const headerName = String(c.header);
+                  const active = visibleColumns.includes(headerName);
+                  return (
+                    <label key={headerName} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer', fontWeight: 600 }}>
+                      <input
+                        type="checkbox"
+                        checked={active}
                       onChange={() => {
-                        setVisibleColumns(prev => active ? prev.filter(x => x !== headerName) : [...prev, headerName]);
+                        const newVisible = active 
+                          ? visibleColumns.filter(x => x !== headerName) 
+                          : [...visibleColumns, headerName];
+                        setVisibleColumns(newVisible);
+                        if (onColumnsChange) {
+                          const updated = gridColumns.map(col => ({
+                            ...col,
+                            visible: newVisible.includes(String(col.header))
+                          }));
+                          onColumnsChange(updated);
+                        }
                       }}
-                      style={{ accentColor: 'var(--ui-primary)' }}
-                    />
-                    <span>{headerName}</span>
-                  </label>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                        style={{ accentColor: 'var(--ui-primary)' }}
+                      />
+                      <span>{headerName}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
       {/* 2. ADVANCED DATA TABLE */}
-      <div style={{ border: borderless ? 'none' : '1px solid var(--ui-line)', borderRadius: borderless ? '0' : 'var(--radius-lg)', background: borderless ? 'transparent' : 'var(--ui-panel-strong)', overflow: 'hidden', boxShadow: borderless ? 'none' : 'var(--ui-shadow-sm)' }}>
+      <div style={{ 
+        border: borderless ? 'none' : '1px solid var(--ui-line)', 
+        borderRadius: borderless ? '0' : 'var(--radius-lg)', 
+        background: borderless ? 'transparent' : 'var(--ui-panel-strong)', 
+        overflow: 'hidden', 
+        boxShadow: borderless ? 'none' : 'var(--ui-shadow-sm)' 
+      }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
           
           {/* Sticky Table Header */}
@@ -268,12 +294,12 @@ export const AdvancedDataGrid = <T extends { id: string | number }>({
                   <tr
                     key={row.id}
                     style={{
-                      background: isSelected ? 'var(--ui-primary-soft)' : rowIdx % 2 === 0 ? 'transparent' : 'var(--ui-bg-2)',
+                      background: isSelected ? 'var(--ui-primary-soft)' : rowIdx % 2 === 0 ? 'transparent' : 'var(--ui-table-zebra)',
                       borderBottom: '1px solid var(--ui-line-2)',
                       transition: 'background-color 0.15s ease'
                     }}
-                    onMouseEnter={(e) => !isSelected && (e.currentTarget.style.backgroundColor = 'rgba(15,23,42,0.02)')}
-                    onMouseLeave={(e) => !isSelected && (e.currentTarget.style.backgroundColor = rowIdx % 2 === 0 ? 'transparent' : 'var(--ui-bg-2)')}
+                    onMouseEnter={(e) => !isSelected && (e.currentTarget.style.backgroundColor = 'var(--ui-table-hover)')}
+                    onMouseLeave={(e) => !isSelected && (e.currentTarget.style.backgroundColor = rowIdx % 2 === 0 ? 'transparent' : 'var(--ui-table-zebra)')}
                   >
                     {/* Checkbox Selection cell */}
                     <td style={{ padding: '16px' }}>
