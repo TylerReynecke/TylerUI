@@ -1,8 +1,16 @@
 {
-  "name": "tyler-ui-dashboard",
-  "private": true,
+  "name": "tylerui",
+  "private": false,
   "version": "1.0.0",
   "type": "module",
+  "main": "./src/library/index.ts",
+  "types": "./src/library/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/library/index.ts",
+      "types": "./src/library/index.ts"
+    }
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
