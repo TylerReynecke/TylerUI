@@ -194,6 +194,7 @@ export const AdvancedDataGrid = <T extends { id: string | number }>({
             </div>
           )}
         </div>
+        </div>
       )}
 
       {/* 2. ADVANCED DATA TABLE */}
