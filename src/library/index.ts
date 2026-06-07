@@ -8,7 +8,7 @@ export {
   SARSVATInput, CurrencyInput, CreditCardInput, CardExpiryInput, CardCVVInput, BankAccountInput, 
   BranchCodeInput, URLInput, IPAddressInput, MACAddressInput, HexColorInput, SocialHandleInput, 
   PercentageInput, UnitMeasurementInput, PostalCodeInput, GPSCoordinatesInput, StrictPasswordCreator, 
-  AdvancedOTPInput, TimeDurationInput, DOBInput, AdvancedRichEditor, sanitizeHTML
+  AdvancedOTPInput, TimeDurationInput, DOBInput, AdvancedRichEditor, sanitizeHTML, AddressAutocomplete
 } from './Inputs';
 
 // Selection

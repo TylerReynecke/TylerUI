@@ -238,6 +238,38 @@ An premium visual WYSIWYG and HTML source-code IDE featuring sandbox isolation a
     *   **Recursive DOMParser Sanitizer (`sanitizeHTML`)**: Prior to rendering, runs recursive DOM scrubbing to delete dangerous tags (`<script>`, `<object>`, `<embed>`, `<link>`, `<iframe>`), Event Hooks (`onclick`), and protocol bypasses (`javascript:`).
     *   **Transparent Drag Shield**: Renders a temporary transparent mask over the visual editor pane during resizing. This prevents the iframe from swallowing mouse coordinate movements, eliminating drag lockups.
 
+### 7. AddressAutocomplete (Google Maps Autocomplete Input)
+A premium address input field that integrates Google Maps Places Autocomplete to help find real addresses while still allowing manual text edits.
+*   **Import Syntax**: `import { AddressAutocomplete } from './library';`
+*   **Properties**:
+    ```typescript
+    interface AddressAutocompleteProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+      label?: string;
+      hint?: string;
+      error?: string;
+      isValid?: boolean;
+      value: string;
+      onChange: (value: string) => void;
+      apiKey?: string; // Optional Google Maps API Key
+    }
+    ```
+*   **Important: Google Maps API Configuration & Requirements**:
+    1.  **Google Maps API Dependency**: To use this component with live recommendations, you must enable the **Maps JavaScript API** and the **Places API** (or **Places API (New)**) in your Google Cloud Console.
+    2.  **API Key Resolution**: The component resolves the API Key in the following order:
+        - Passed directly via the `apiKey` prop.
+        - Resolved from the environment variable `VITE_GOOGLE_MAPS_API_KEY` via `(import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY`.
+    3.  **Default Behavior**: By default, TylerUI does NOT hardcode or supply any default Google Maps API Key. If no key is found, the component displays a console warning and falls back gracefully to a standard manual text input field.
+    4.  **Application Restrictions**: It is highly recommended to restrict your API key to specific HTTP referrer websites (e.g., `http://localhost:*` or your production domain) and only authorize the Places and Maps JavaScript APIs.
+*   **Usage**:
+    ```typescript
+    <AddressAutocomplete
+      label="Physical Address"
+      value={address}
+      onChange={(newAddress) => setAddress(newAddress)}
+      placeholder="Type to search Google Maps..."
+    />
+    ```
+
 ---
 
 ## ☑️ Category 3: Selection & Boolean Controls (`Selection.tsx`)

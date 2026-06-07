@@ -4226,3 +4226,125 @@ export const AdvancedRichEditor: React.FC<AdvancedRichEditorProps> = ({
     </div>
   );
 };
+
+// --- 2.30 GOOGLE PLACES ADDRESS AUTOCOMPLETE ---
+interface AddressAutocompleteProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+  label?: string;
+  hint?: string;
+  error?: string;
+  isValid?: boolean;
+  value: string;
+  onChange: (value: string) => void;
+  apiKey?: string;
+}
+
+export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
+  label,
+  hint,
+  error,
+  isValid,
+  value,
+  onChange,
+  apiKey,
+  className = '',
+  onFocus,
+  onBlur,
+  placeholder = 'Start typing address...',
+  ...props
+}) => {
+  const [focused, setFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const autocompleteRef = useRef<any>(null);
+
+  useEffect(() => {
+    const mapsApiKey = apiKey || (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || '';
+    if (!mapsApiKey) {
+      console.warn('Google Maps API Key missing. Address Autocomplete will fallback to manual input.');
+      return;
+    }
+
+    const scriptId = 'google-maps-places-script';
+    let script = document.getElementById(scriptId) as HTMLScriptElement;
+
+    const initializeAutocomplete = () => {
+      if (!inputRef.current) return;
+      if (autocompleteRef.current) return;
+
+      try {
+        const g = (window as any).google;
+        const autocomplete = new g.maps.places.Autocomplete(inputRef.current, {
+          types: ['address'],
+        });
+
+        autocomplete.addListener('place_changed', () => {
+          const place = autocomplete.getPlace();
+          if (place && place.formatted_address) {
+            onChange(place.formatted_address);
+          } else if (inputRef.current) {
+            onChange(inputRef.current.value);
+          }
+        });
+
+        autocompleteRef.current = autocomplete;
+      } catch (err) {
+        console.error('Failed to initialize Google Places Autocomplete:', err);
+      }
+    };
+
+    const g = (window as any).google;
+    if (g && g.maps && g.maps.places) {
+      initializeAutocomplete();
+    } else {
+      if (!script) {
+        script = document.createElement('script');
+        script.id = scriptId;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${mapsApiKey}&libraries=places`;
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+      }
+
+      const checkGoogleLoaded = setInterval(() => {
+        const currentG = (window as any).google;
+        if (currentG && currentG.maps && currentG.maps.places) {
+          clearInterval(checkGoogleLoaded);
+          initializeAutocomplete();
+        }
+      }, 100);
+
+      return () => clearInterval(checkGoogleLoaded);
+    }
+  }, [onChange, apiKey]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange(e.target.value);
+  };
+
+  return (
+    <div className="input-group">
+      {label && (
+        <label className="input-label">
+          {label} {hint && <span className="hint">{hint}</span>}
+        </label>
+      )}
+      <div className={`input-field-wrapper ${focused ? 'focused' : ''} ${error ? 'invalid' : ''} ${isValid ? 'valid' : ''} ${className}`}>
+        <span style={{ paddingLeft: '12px', color: 'var(--ui-muted)', display: 'flex', alignItems: 'center' }}><MapPin size={18} /></span>
+        <input
+          ref={inputRef}
+          className="input-field"
+          type="text"
+          value={value}
+          onChange={handleInputChange}
+          placeholder={placeholder}
+          onFocus={(e) => { setFocused(true); onFocus?.(e); }}
+          onBlur={(e) => { setFocused(false); onBlur?.(e); }}
+          {...props}
+        />
+        {isValid && <span style={{ color: 'var(--ui-green)', paddingRight: '12px', display: 'flex', alignItems: 'center' }}><Check size={16} /></span>}
+        {error && <span style={{ color: 'var(--ui-red)', paddingRight: '12px', display: 'flex', alignItems: 'center' }}><AlertCircle size={16} /></span>}
+      </div>
+      {error && <span className="input-helper error">{error}</span>}
+    </div>
+  );
+};
+
