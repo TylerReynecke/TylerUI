@@ -192,7 +192,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ items, activeId, onSelect, isC
                 fontSize: '13px',
                 boxShadow: active ? 'inset 2px 0 0 var(--ui-primary)' : 'none'
               }}
-              onMouseEnter={(e) => !active && (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.4)')}
+              onMouseEnter={(e) => !active && (e.currentTarget.style.backgroundColor = 'var(--ui-primary-soft)')}
               onMouseLeave={(e) => !active && (e.currentTarget.style.backgroundColor = 'transparent')}
             >
               <IconComponent size={18} />
