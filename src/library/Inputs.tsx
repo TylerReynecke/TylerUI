@@ -4251,11 +4251,17 @@ interface AddressAutocompleteProps extends Omit<React.InputHTMLAttributes<HTMLIn
   ...props
 }) => {
   const [focused, setFocused] = useState(false);
+  const [localValue, setLocalValue] = useState(value);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [sessionToken, setSessionToken] = useState<any>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceTimerRef = useRef<any>(null);
+  const parentUpdateTimerRef = useRef<any>(null);
+
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
 
   useEffect(() => {
     const mapsApiKey = apiKey || (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || '';
@@ -4310,6 +4316,9 @@ interface AddressAutocompleteProps extends Omit<React.InputHTMLAttributes<HTMLIn
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
+      if (parentUpdateTimerRef.current) {
+        clearTimeout(parentUpdateTimerRef.current);
+      }
     };
   }, [sessionToken]);
 
@@ -4341,15 +4350,23 @@ interface AddressAutocompleteProps extends Omit<React.InputHTMLAttributes<HTMLIn
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    onChange(val);
+    setLocalValue(val);
     setIsOpen(true);
 
+    // Debounce suggestions fetch (150ms for faster feedback)
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
-
     debounceTimerRef.current = setTimeout(() => {
       fetchSuggestions(val);
+    }, 150);
+
+    // Debounce parent component state update (300ms to avoid constant page re-renders)
+    if (parentUpdateTimerRef.current) {
+      clearTimeout(parentUpdateTimerRef.current);
+    }
+    parentUpdateTimerRef.current = setTimeout(() => {
+      onChange(val);
     }, 300);
   };
 
@@ -4362,6 +4379,7 @@ interface AddressAutocompleteProps extends Omit<React.InputHTMLAttributes<HTMLIn
       await place.fetchFields({ fields: ["formattedAddress", "location"] });
       
       if (place.formattedAddress) {
+        setLocalValue(place.formattedAddress);
         onChange(place.formattedAddress);
       }
       
@@ -4387,13 +4405,20 @@ interface AddressAutocompleteProps extends Omit<React.InputHTMLAttributes<HTMLIn
           ref={inputRef}
           className="input-field"
           type="text"
-          value={value}
+          value={localValue}
           onChange={handleInputChange}
           placeholder={placeholder}
           onFocus={(e) => { setFocused(true); setIsOpen(true); onFocus?.(e); }}
           onBlur={(e) => {
             setFocused(false);
             setTimeout(() => setIsOpen(false), 200);
+            
+            // Flush parent update immediately on blur
+            if (parentUpdateTimerRef.current) {
+              clearTimeout(parentUpdateTimerRef.current);
+            }
+            onChange(localValue);
+            
             onBlur?.(e);
           }}
           {...props}
