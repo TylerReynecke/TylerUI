@@ -4234,7 +4234,7 @@ interface AddressAutocompleteProps extends Omit<React.InputHTMLAttributes<HTMLIn
   error?: string;
   isValid?: boolean;
   value: string;
-  onChange: (value: string) => void;
+  onChange: (value: string, placeId?: string) => void;
   apiKey?: string;
 }export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   label,
@@ -4380,7 +4380,7 @@ interface AddressAutocompleteProps extends Omit<React.InputHTMLAttributes<HTMLIn
       
       if (place.formattedAddress) {
         setLocalValue(place.formattedAddress);
-        onChange(place.formattedAddress);
+        onChange(place.formattedAddress, prediction.placeId);
       }
       
       const g = (window as any).google;
