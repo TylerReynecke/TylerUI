@@ -4296,13 +4296,22 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
       initializeAutocomplete();
     } else {
       if (!script) {
+        (window as any).__googleMapsCallback = () => {
+          window.dispatchEvent(new Event('google-maps-loaded'));
+        };
         script = document.createElement('script');
         script.id = scriptId;
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${mapsApiKey}&libraries=places`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${mapsApiKey}&libraries=places&loading=async&callback=__googleMapsCallback`;
         script.async = true;
         script.defer = true;
         document.head.appendChild(script);
       }
+
+      const handleLoaded = () => {
+        initializeAutocomplete();
+      };
+
+      window.addEventListener('google-maps-loaded', handleLoaded);
 
       const checkGoogleLoaded = setInterval(() => {
         const currentG = (window as any).google;
@@ -4310,9 +4319,12 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
           clearInterval(checkGoogleLoaded);
           initializeAutocomplete();
         }
-      }, 100);
+      }, 200);
 
-      return () => clearInterval(checkGoogleLoaded);
+      return () => {
+        window.removeEventListener('google-maps-loaded', handleLoaded);
+        clearInterval(checkGoogleLoaded);
+      };
     }
   }, [onChange, apiKey]);
 
