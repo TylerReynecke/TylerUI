@@ -4236,9 +4236,7 @@ interface AddressAutocompleteProps extends Omit<React.InputHTMLAttributes<HTMLIn
   value: string;
   onChange: (value: string) => void;
   apiKey?: string;
-}
-
-export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
+}export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   label,
   hint,
   error,
@@ -4253,8 +4251,11 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   ...props
 }) => {
   const [focused, setFocused] = useState(false);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [sessionToken, setSessionToken] = useState<any>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<any>(null);
+  const debounceTimerRef = useRef<any>(null);
 
   useEffect(() => {
     const mapsApiKey = apiKey || (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || '';
@@ -4266,74 +4267,115 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
     const scriptId = 'google-maps-places-script';
     let script = document.getElementById(scriptId) as HTMLScriptElement;
 
-    const initializeAutocomplete = () => {
-      if (!inputRef.current) return;
-      if (autocompleteRef.current) return;
+    if (!script) {
+      (window as any).__googleMapsCallback = () => {
+        window.dispatchEvent(new Event('google-maps-loaded'));
+      };
+      script = document.createElement('script');
+      script.id = scriptId;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${mapsApiKey}&libraries=places&loading=async&callback=__googleMapsCallback`;
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    } else {
+      const g = (window as any).google;
+      if (!sessionToken && g && g.maps && g.maps.places) {
+        setSessionToken(new g.maps.places.AutocompleteSessionToken());
+      }
+    }
 
-      try {
-        const g = (window as any).google;
-        const autocomplete = new g.maps.places.Autocomplete(inputRef.current, {
-          types: ['address'],
-        });
+    const checkGoogleLoaded = setInterval(() => {
+      const currentG = (window as any).google;
+      if (currentG && currentG.maps && currentG.maps.places) {
+        clearInterval(checkGoogleLoaded);
+        if (!sessionToken) {
+          setSessionToken(new currentG.maps.places.AutocompleteSessionToken());
+        }
+      }
+    }, 200);
 
-        autocomplete.addListener('place_changed', () => {
-          const place = autocomplete.getPlace();
-          if (place && place.formatted_address) {
-            onChange(place.formatted_address);
-          } else if (inputRef.current) {
-            onChange(inputRef.current.value);
-          }
-        });
+    return () => clearInterval(checkGoogleLoaded);
+  }, [apiKey, sessionToken]);
 
-        autocompleteRef.current = autocomplete;
-      } catch (err) {
-        console.error('Failed to initialize Google Places Autocomplete:', err);
+  useEffect(() => {
+    const handleLoaded = () => {
+      const currentG = (window as any).google;
+      if (currentG && currentG.maps && currentG.maps.places && !sessionToken) {
+        setSessionToken(new currentG.maps.places.AutocompleteSessionToken());
       }
     };
+    window.addEventListener('google-maps-loaded', handleLoaded);
+    return () => {
+      window.removeEventListener('google-maps-loaded', handleLoaded);
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [sessionToken]);
 
-    const g = (window as any).google;
-    if (g && g.maps && g.maps.places) {
-      initializeAutocomplete();
-    } else {
-      if (!script) {
-        (window as any).__googleMapsCallback = () => {
-          window.dispatchEvent(new Event('google-maps-loaded'));
-        };
-        script = document.createElement('script');
-        script.id = scriptId;
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${mapsApiKey}&libraries=places&loading=async&callback=__googleMapsCallback`;
-        script.async = true;
-        script.defer = true;
-        document.head.appendChild(script);
+  const fetchSuggestions = async (inputVal: string) => {
+    if (!inputVal.trim()) {
+      setSuggestions([]);
+      return;
+    }
+
+    try {
+      const g = (window as any).google;
+      if (!g || !g.maps) return;
+
+      const { AutocompleteSuggestion } = await g.maps.importLibrary("places");
+      
+      const request: any = {
+        input: inputVal,
+      };
+      if (sessionToken) {
+        request.sessionToken = sessionToken;
       }
 
-      const handleLoaded = () => {
-        initializeAutocomplete();
-      };
-
-      window.addEventListener('google-maps-loaded', handleLoaded);
-
-      const checkGoogleLoaded = setInterval(() => {
-        const currentG = (window as any).google;
-        if (currentG && currentG.maps && currentG.maps.places) {
-          clearInterval(checkGoogleLoaded);
-          initializeAutocomplete();
-        }
-      }, 200);
-
-      return () => {
-        window.removeEventListener('google-maps-loaded', handleLoaded);
-        clearInterval(checkGoogleLoaded);
-      };
+      const { suggestions: results } = await AutocompleteSuggestion.fetchAutocompleteSuggestions(request);
+      setSuggestions(results || []);
+    } catch (err) {
+      console.error("Error fetching autocomplete suggestions:", err);
     }
-  }, [onChange, apiKey]);
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange(e.target.value);
+    const val = e.target.value;
+    onChange(val);
+    setIsOpen(true);
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      fetchSuggestions(val);
+    }, 300);
+  };
+
+  const handleSelectSuggestion = async (suggestion: any) => {
+    setIsOpen(false);
+    try {
+      const prediction = suggestion.placePrediction;
+      const place = prediction.toPlace();
+      
+      await place.fetchFields({ fields: ["formattedAddress", "location"] });
+      
+      if (place.formattedAddress) {
+        onChange(place.formattedAddress);
+      }
+      
+      const g = (window as any).google;
+      if (g && g.maps && g.maps.places) {
+        setSessionToken(new g.maps.places.AutocompleteSessionToken());
+      }
+    } catch (err) {
+      console.error("Error fetching place details:", err);
+    }
   };
 
   return (
-    <div className="input-group">
+    <div className="input-group" style={{ position: 'relative' }}>
       {label && (
         <label className="input-label">
           {label} {hint && <span className="hint">{hint}</span>}
@@ -4348,15 +4390,54 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
           value={value}
           onChange={handleInputChange}
           placeholder={placeholder}
-          onFocus={(e) => { setFocused(true); onFocus?.(e); }}
-          onBlur={(e) => { setFocused(false); onBlur?.(e); }}
+          onFocus={(e) => { setFocused(true); setIsOpen(true); onFocus?.(e); }}
+          onBlur={(e) => {
+            setFocused(false);
+            setTimeout(() => setIsOpen(false), 200);
+            onBlur?.(e);
+          }}
           {...props}
         />
         {isValid && <span style={{ color: 'var(--ui-green)', paddingRight: '12px', display: 'flex', alignItems: 'center' }}><Check size={16} /></span>}
         {error && <span style={{ color: 'var(--ui-red)', paddingRight: '12px', display: 'flex', alignItems: 'center' }}><AlertCircle size={16} /></span>}
       </div>
+
+      {isOpen && suggestions.length > 0 && (
+        <div style={{
+          position: 'absolute',
+          top: '100%',
+          left: 0,
+          right: 0,
+          background: 'var(--ui-panel-pure)',
+          border: '1px solid var(--ui-line)',
+          borderRadius: '8px',
+          boxShadow: 'var(--ui-shadow-lg)',
+          zIndex: 9999,
+          marginTop: '4px',
+          maxHeight: '220px',
+          overflowY: 'auto'
+        }}>
+          {suggestions.map((s, idx) => (
+            <div
+              key={idx}
+              onClick={() => handleSelectSuggestion(s)}
+              style={{
+                padding: '10px 14px',
+                fontSize: '13px',
+                fontWeight: 600,
+                color: 'var(--ui-text)',
+                cursor: 'pointer',
+                borderBottom: idx === suggestions.length - 1 ? 'none' : '1px solid var(--ui-line-2)'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--ui-primary-soft)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              {s.placePrediction.text?.text || s.placePrediction.description || ''}
+            </div>
+          ))}
+        </div>
+      )}
       {error && <span className="input-helper error">{error}</span>}
     </div>
   );
 };
-
