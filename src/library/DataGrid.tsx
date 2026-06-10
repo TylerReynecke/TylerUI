@@ -17,6 +17,7 @@ interface DataGridProps<T> {
   data: T[];
   onDeleteSelected?: (selectedRows: T[]) => void;
   showToolbar?: boolean;
+  showSearch?: boolean;
   borderless?: boolean;
   onColumnsChange?: (columns: ColumnDef<T>[]) => void;
   enableDoubleClickEdit?: boolean;
@@ -36,6 +37,7 @@ export const AdvancedDataGrid = <T extends { id: string | number }>({
   data,
   onDeleteSelected,
   showToolbar = true,
+  showSearch = true,
   borderless = false,
   onColumnsChange,
   enableDoubleClickEdit = true,
@@ -231,15 +233,19 @@ export const AdvancedDataGrid = <T extends { id: string | number }>({
       {showToolbar && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', flexShrink: 0 }}>
           {/* Search */}
-          <div style={{ display: 'flex', alignItems: 'center', background: 'var(--ui-panel-strong)', border: '1px solid var(--ui-line)', borderRadius: '14px', padding: '0 12px', width: '320px', height: '42px' }}>
-            <Search size={16} style={{ color: 'var(--ui-muted)', marginRight: '8px' }} />
-            <input
-              style={{ border: 0, outline: 0, background: 'transparent', width: '100%', fontSize: '13px', color: 'var(--ui-text)' }}
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search records in real-time..."
-            />
-          </div>
+          {showSearch ? (
+            <div style={{ display: 'flex', alignItems: 'center', background: 'var(--ui-panel-strong)', border: '1px solid var(--ui-line)', borderRadius: '14px', padding: '0 12px', width: '320px', height: '42px' }}>
+              <Search size={16} style={{ color: 'var(--ui-muted)', marginRight: '8px' }} />
+              <input
+                style={{ border: 0, outline: 0, background: 'transparent', width: '100%', fontSize: '13px', color: 'var(--ui-text)' }}
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search records in real-time..."
+              />
+            </div>
+          ) : (
+            <div />
+          )}
 
           {/* Filters and Visibility Controls */}
           <div style={{ display: 'flex', gap: '8px', position: 'relative' }}>
