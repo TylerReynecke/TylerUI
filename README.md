@@ -350,24 +350,74 @@ A modal searching hub matching key inputs with custom functions and commands.
 Highly interactive cards, responsive timelines, and expandable accordion decks.
 
 ### 1. AdvancedDataGrid (`DataGrid.tsx`)
-An enterprise-grade grid featuring pagination, columns sorting, row selectors, and real-time custom filtering.
+An enterprise-grade grid featuring column reordering, density adjustments, real-time search, bulk deletion, double-click inline cell editing, and automatic/controlled pagination.
+
 *   **Import Syntax**: `import { AdvancedDataGrid } from './library';`
 *   **Properties**:
     ```typescript
-    interface Column {
-      key: string;
-      label: string;
-      sortable?: boolean;
-      render?: (val: any, row: any) => React.ReactNode;
+    interface ColumnDef<T> {
+      header: string;
+      accessorKey: keyof T;
+      cell?: (row: T) => React.ReactNode;
+      visible?: boolean;
     }
-    interface GridProps {
-      columns: Column[];
-      data: any[];
-      searchPlaceholder?: string;
-      selectable?: boolean;
-      onSelectionChange?: (selectedRows: any[]) => void;
+
+    interface DataGridProps<T> {
+      columns: ColumnDef<T>[];
+      data: T[];
+      onDeleteSelected?: (selectedRows: T[]) => void;
+      showToolbar?: boolean;
+      borderless?: boolean;
+      onColumnsChange?: (columns: ColumnDef<T>[]) => void;
+      enableDoubleClickEdit?: boolean;
+      height?: string;
+      
+      // Pagination Props
+      page?: number;
+      limit?: number;
+      totalCount?: number;
+      onPageChange?: (page: number) => void;
+      onLimitChange?: (limit: number) => void;
+      showPagination?: boolean;
     }
     ```
+
+*   **How Pagination & Rows Limit Work**:
+    `AdvancedDataGrid` includes an integrated pagination footer inside the rounded table container. It supports two modes of operation:
+    
+    1.  **Client-Side Pagination (Automatic / Uncontrolled)**
+        *   **Activation**: Simply pass the `data` array *without* providing `page` or `onPageChange` props.
+        *   **Behavior**: The table manages the pagination page and limit internally. Slicing is performed locally using the selected size from the dropdown selector (10, 25, 50, or 100 rows).
+        *   **Example**:
+            ```typescript
+            <AdvancedDataGrid
+              columns={columns}
+              data={fiftyMockItems}
+              height="auto" // Wraps nicely to row content
+            />
+            ```
+
+    2.  **Server-Side Pagination (Controlled)**
+        *   **Activation**: Pass `page`, `limit`, `totalCount`, `onPageChange`, and `onLimitChange` props.
+        *   **Behavior**: The component functions in controlled mode. Changing page size calls `onLimitChange(newLimit)`, allowing the parent component to trigger API reload calls with the new limit sizing.
+        *   **Example**:
+            ```typescript
+            const [page, setPage] = useState(1);
+            const [limit, setLimit] = useState(10);
+            const { data, totalCount } = useApiList({ page, limit, dependencies: [page, limit] });
+            
+            return (
+              <AdvancedDataGrid
+                columns={columns}
+                data={data}
+                page={page}
+                limit={limit}
+                totalCount={totalCount}
+                onPageChange={setPage}
+                onLimitChange={setLimit}
+              />
+            );
+            ```
 
 ---
 
