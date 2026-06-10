@@ -23,6 +23,10 @@ interface DataGridProps<T> {
   enableDoubleClickEdit?: boolean;
   height?: string;
   
+  // Search Props
+  search?: string;
+  onSearchChange?: (search: string) => void;
+
   // Pagination Props
   page?: number;
   limit?: number;
@@ -42,6 +46,8 @@ export const AdvancedDataGrid = <T extends { id: string | number }>({
   onColumnsChange,
   enableDoubleClickEdit = true,
   height = '500px',
+  search: propSearch,
+  onSearchChange,
   page: propPage,
   limit: propLimit,
   totalCount: propTotalCount,
@@ -49,7 +55,16 @@ export const AdvancedDataGrid = <T extends { id: string | number }>({
   onLimitChange,
   showPagination = true
 }: DataGridProps<T>) => {
-  const [search, setSearch] = useState('');
+  const [internalSearch, setInternalSearch] = useState('');
+  const activeSearch = propSearch !== undefined ? propSearch : internalSearch;
+
+  const handleSearchChange = (val: string) => {
+    if (onSearchChange) {
+      onSearchChange(val);
+    } else {
+      setInternalSearch(val);
+    }
+  };
   const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
   const [visibleColumns, setVisibleColumns] = useState<string[]>(
     columns.filter(c => c.visible !== false).map(c => String(c.header))
@@ -120,12 +135,12 @@ export const AdvancedDataGrid = <T extends { id: string | number }>({
         cancelAnimationFrame(animationFrameId);
       }
     };
-  }, [data, search, activePage, activeLimit]);
+  }, [data, activeSearch, activePage, activeLimit]);
 
   // Reset page on search
   React.useEffect(() => {
     setInternalPage(1);
-  }, [search]);
+  }, [activeSearch]);
 
   // Double-Click Inline Edit State Mock
   const [editingCell, setEditingCell] = useState<{ rowId: string | number; colKey: string } | null>(null);
@@ -189,7 +204,7 @@ export const AdvancedDataGrid = <T extends { id: string | number }>({
 
   const filtered = gridData.filter(row => 
     Object.values(row).some(val => 
-      String(val).toLowerCase().includes(search.toLowerCase())
+      String(val).toLowerCase().includes(activeSearch.toLowerCase())
     )
   );
 
@@ -238,8 +253,8 @@ export const AdvancedDataGrid = <T extends { id: string | number }>({
               <Search size={16} style={{ color: 'var(--ui-muted)', marginRight: '8px' }} />
               <input
                 style={{ border: 0, outline: 0, background: 'transparent', width: '100%', fontSize: '13px', color: 'var(--ui-text)' }}
-                value={search}
-                onChange={e => setSearch(e.target.value)}
+                value={activeSearch}
+                onChange={e => handleSearchChange(e.target.value)}
                 placeholder="Search records in real-time..."
               />
             </div>
