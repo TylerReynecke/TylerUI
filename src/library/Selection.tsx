@@ -92,12 +92,16 @@ interface ToggleProps {
   active: boolean;
   onChange: (active: boolean) => void;
   sunMoonIcons?: boolean;
+  disabled?: boolean;
 }
 
-export const ToggleSwitch: React.FC<ToggleProps> = ({ label, active, onChange, sunMoonIcons = false }) => {
+export const ToggleSwitch: React.FC<ToggleProps> = ({ label, active, onChange, sunMoonIcons = false, disabled = false }) => {
   return (
-    <label className="switch-label">
-      <div className={`switch-track ${active ? 'active' : ''}`} onClick={() => onChange(!active)}>
+    <label 
+      className="switch-label"
+      style={{ opacity: disabled ? 0.5 : 1, cursor: disabled ? 'not-allowed' : 'pointer' }}
+    >
+      <div className={`switch-track ${active ? 'active' : ''}`} onClick={() => !disabled && onChange(!active)}>
         <div className="switch-thumb" style={{ display: 'grid', placeItems: 'center', fontSize: '10px' }}>
           {sunMoonIcons && (active ? '🌙' : '☀️')}
         </div>
