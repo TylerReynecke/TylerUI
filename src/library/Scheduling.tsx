@@ -41,9 +41,10 @@ interface DatePickerProps {
   label?: string;
   selectedDate: Date | null;
   onChange: (d: Date) => void;
+  disabled?: boolean;
 }
 
-export const DatePicker: React.FC<DatePickerProps> = ({ label, selectedDate, onChange }) => {
+export const DatePicker: React.FC<DatePickerProps> = ({ label, selectedDate, onChange, disabled = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -89,9 +90,15 @@ export const DatePicker: React.FC<DatePickerProps> = ({ label, selectedDate, onC
     <div className="input-group" ref={dropdownRef} style={{ position: 'relative' }}>
       {label && <label className="input-label">{label}</label>}
       <div 
-        className="input-field-wrapper"
-        onClick={() => setIsOpen(!isOpen)}
-        style={{ cursor: 'pointer', paddingRight: '12px', display: 'flex', justifyContent: 'space-between' }}
+        className={`input-field-wrapper ${disabled ? 'disabled' : ''}`}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        style={{ 
+          cursor: disabled ? 'not-allowed' : 'pointer', 
+          paddingRight: '12px', 
+          display: 'flex', 
+          justifyContent: 'space-between',
+          opacity: disabled ? 0.5 : 1
+        }}
       >
         <span className="input-field" style={{ display: 'flex', alignItems: 'center' }}>
           {formattedDate}
@@ -826,9 +833,10 @@ interface DateTimePickerProps {
   label?: string;
   value: Date | null;
   onChange: (d: Date | null) => void;
+  disabled?: boolean;
 }
 
-export const DateTimePicker: React.FC<DateTimePickerProps> = ({ label, value, onChange }) => {
+export const DateTimePicker: React.FC<DateTimePickerProps> = ({ label, value, onChange, disabled = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [timeQuery, setTimeQuery] = useState('');
@@ -1012,9 +1020,16 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({ label, value, on
     <div className="input-group" ref={dropdownRef} style={{ position: 'relative' }}>
       {label && <label className="input-label">{label}</label>}
       <div 
-        className="input-field-wrapper"
-        onClick={() => setIsOpen(!isOpen)}
-        style={{ cursor: 'pointer', paddingRight: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+        className={`input-field-wrapper ${disabled ? 'disabled' : ''}`}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        style={{ 
+          cursor: disabled ? 'not-allowed' : 'pointer', 
+          paddingRight: '12px', 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          opacity: disabled ? 0.5 : 1
+        }}
       >
         <span className="input-field" style={{ display: 'flex', alignItems: 'center' }}>
           {formattedDateTime}

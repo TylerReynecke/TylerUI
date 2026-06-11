@@ -826,7 +826,7 @@ interface CurrencyInputProps extends Omit<TextInputProps, 'value' | 'onChange'> 
 }
 
 export const CurrencyInput: React.FC<CurrencyInputProps> = ({
-  label = 'Amount / Cost',
+  label = 'Amount',
   value,
   onChange,
   currencyPrefix = 'R',
