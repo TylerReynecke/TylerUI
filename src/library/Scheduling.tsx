@@ -562,9 +562,10 @@ interface TwinCalendarProps {
   startDate: Date | null;
   endDate: Date | null;
   onChange: (start: Date | null, end: Date | null) => void;
+  disabled?: boolean;
 }
 
-export const GoogleTwinCalendar: React.FC<TwinCalendarProps> = ({ startDate, endDate, onChange }) => {
+export const GoogleTwinCalendar: React.FC<TwinCalendarProps> = ({ startDate, endDate, onChange, disabled = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [leftMonth, setLeftMonth] = useState(new Date());
   const [rightMonth, setRightMonth] = useState(() => {
@@ -735,9 +736,15 @@ export const GoogleTwinCalendar: React.FC<TwinCalendarProps> = ({ startDate, end
     <div className="input-group" ref={dropdownRef} style={{ position: 'relative' }}>
       <label className="input-label">Date Range</label>
       <div 
-        className="input-field-wrapper"
-        onClick={() => setIsOpen(!isOpen)}
-        style={{ cursor: 'pointer', paddingRight: '12px', display: 'flex', justifyContent: 'space-between' }}
+        className={`input-field-wrapper ${disabled ? 'disabled' : ''}`}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        style={{ 
+          cursor: disabled ? 'not-allowed' : 'pointer', 
+          paddingRight: '12px', 
+          display: 'flex', 
+          justifyContent: 'space-between',
+          opacity: disabled ? 0.5 : 1
+        }}
       >
         <span className="input-field" style={{ display: 'flex', alignItems: 'center' }}>
           {formattedLabel}
