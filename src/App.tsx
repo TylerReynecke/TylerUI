@@ -60,6 +60,18 @@ const App: React.FC = () => {
   const { theme, setTheme, primaryColor, setPrimaryColor } = useUITheme();
   const { addToast } = Lib.useToasts();
 
+  // Mobile layout state and media query listener
+  const [isMobile, setIsMobile] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  React.useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 768px)');
+    setIsMobile(mediaQuery.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
+
   // Navigation / Scrollspy Section Selection
   const [activeNav, setActiveNav] = useState('actions');
 
@@ -321,10 +333,24 @@ const App: React.FC = () => {
   );
 
   return (
-    <div className="app" style={{ minHeight: '100vh', display: 'flex', gap: '40px', padding: '40px', position: 'relative' }}>
+    <div className="app" style={{
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: isMobile ? 'column' : 'row',
+      gap: isMobile ? '16px' : '40px',
+      padding: isMobile ? '16px' : '40px',
+      position: 'relative'
+    }}>
       
       {/* 🧭 LEFT SIDEBAR */}
-      <div style={{ width: '280px', flexShrink: 0, position: 'sticky', top: '40px', height: 'calc(100vh - 80px)' }}>
+      <div style={{
+        width: '280px',
+        flexShrink: 0,
+        position: 'sticky',
+        top: '40px',
+        height: 'calc(100vh - 80px)',
+        display: isMobile ? 'none' : 'block'
+      }}>
         <Lib.Sidebar 
           items={navItems.filter(n => !n.isHeader) as any} 
           activeId={activeNav}
@@ -334,6 +360,77 @@ const App: React.FC = () => {
           }}
         />
       </div>
+
+      {/* 📱 MOBILE SIDEBAR DRAWER */}
+      {isMobile && (
+        <Lib.SlideOver
+          isOpen={isMobileSidebarOpen}
+          onClose={() => setIsMobileSidebarOpen(false)}
+          title="Component Navigation"
+        >
+          <div style={{ padding: '8px 0' }}>
+            <Lib.Sidebar 
+              items={navItems.filter(n => !n.isHeader) as any} 
+              activeId={activeNav}
+              onSelect={(id) => {
+                setActiveNav(id);
+                setIsMobileSidebarOpen(false);
+                document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            />
+          </div>
+        </Lib.SlideOver>
+      )}
+
+      {/* 📱 MOBILE HEADER */}
+      {isMobile && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: 'var(--ui-panel-pure)',
+          border: '1px solid var(--ui-line)',
+          borderRadius: '16px',
+          padding: '12px 18px',
+          position: 'sticky',
+          top: '12px',
+          zIndex: 999,
+          boxShadow: 'var(--ui-shadow-md)',
+          flexShrink: 0
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              onClick={() => setIsMobileSidebarOpen(true)}
+              style={{
+                background: 'transparent',
+                border: 0,
+                cursor: 'pointer',
+                color: 'var(--ui-text)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '8px',
+                borderRadius: '8px',
+                backgroundColor: 'var(--ui-panel-strong)'
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
+            </button>
+            <span style={{ fontWeight: 800, fontSize: '15px' }}>Tyler UI Showcase</span>
+          </div>
+          <Lib.SegmentedControl 
+            segments={['Light', 'Dark']} 
+            activeSegment={theme === 'dark' ? 'Dark' : 'Light'} 
+            onChange={(seg) => {
+              setTheme(seg.toLowerCase() as 'light' | 'dark');
+            }} 
+          />
+        </div>
+      )}
 
       {/* 💻 MAIN SHOWCASE CANVAS */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '48px', minWidth: 0 }}>

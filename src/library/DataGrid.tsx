@@ -72,6 +72,31 @@ export const AdvancedDataGrid = <T extends { id: string | number }>({
   const [showColMenu, setShowColMenu] = useState(false);
   const [density, setDensity] = useState<'compact' | 'relaxed'>('relaxed');
 
+  // Mobile responsive view states
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileViewMode, setMobileViewMode] = useState<'list' | 'detail'>('list');
+  const [mobileSelectedExtraCol, setMobileSelectedExtraCol] = useState<string>('');
+
+  React.useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 768px)');
+    setIsMobile(mediaQuery.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
+
+  // Initialize and validate mobileSelectedExtraCol
+  React.useEffect(() => {
+    const visibleNonPrimary = columns
+      .filter((c, idx) => idx > 0 && c.visible !== false)
+      .map(c => String(c.header));
+    if (visibleNonPrimary.length > 0) {
+      if (!mobileSelectedExtraCol || !visibleNonPrimary.includes(mobileSelectedExtraCol)) {
+        setMobileSelectedExtraCol(visibleNonPrimary[0]);
+      }
+    }
+  }, [columns, mobileSelectedExtraCol]);
+
   // Pagination State
   const [internalPage, setInternalPage] = useState(1);
   const [internalLimit, setInternalLimit] = useState(10);
@@ -242,7 +267,7 @@ export const AdvancedDataGrid = <T extends { id: string | number }>({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative', height, minHeight: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative', height: isMobile ? '80vh' : height, minHeight: 0 }}>
       
       {/* 1. TABLE TOOLBAR */}
       {showToolbar && (
@@ -340,177 +365,450 @@ export const AdvancedDataGrid = <T extends { id: string | number }>({
         boxShadow: borderless ? 'none' : 'var(--ui-shadow-sm)' 
       }}>
         
-        {/* Table Header Wrapper (Non-scrollable) */}
-        <div style={{ 
-          background: 'var(--ui-bg-2)', 
-          borderBottom: '2px solid var(--ui-line)',
-          scrollbarGutter: 'stable',
-          overflowY: 'hidden',
-          flexShrink: 0
-        }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px', tableLayout: 'fixed' }}>
-            <colgroup>
-              <col style={{ width: '48px' }} />
-              {gridColumns.filter(c => visibleColumns.includes(String(c.header))).map((_, idx) => (
-                <col key={idx} />
-              ))}
-            </colgroup>
-            
-            {/* Table Header */}
-            <thead>
-              <tr>
-                <th style={{ padding: '16px', width: '48px' }}>
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.length === filtered.length && filtered.length > 0}
-                    onChange={toggleSelectAll}
-                    style={{ accentColor: 'var(--ui-primary)', cursor: 'pointer' }}
-                  />
-                </th>
-                {gridColumns.filter(c => visibleColumns.includes(String(c.header))).map((col, idx) => {
-                  const headerName = String(col.header);
-                  return (
-                    <th 
-                      key={idx} 
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, headerName)}
-                      onDragOver={(e) => handleDragOver(e, headerName)}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, headerName)}
-                      onDragEnd={handleDragEnd}
-                      style={{ 
-                        padding: density === 'relaxed' ? '16px' : '10px 16px', 
-                        fontWeight: 700, 
-                        color: 'var(--ui-muted)',
-                        textTransform: 'uppercase',
-                        fontSize: '11px',
-                        letterSpacing: '0.04em',
-                        cursor: 'grab',
-                        backgroundColor: draggedColId === headerName
-                          ? 'var(--ui-bg-3)'
-                          : dragOverColId === headerName
-                            ? 'var(--ui-primary-soft)'
-                            : 'transparent',
-                        transition: 'all 0.15s ease',
-                        borderLeft: dragOverColId === headerName && draggedColId !== headerName
-                          ? '2px solid var(--ui-primary)'
-                          : 'none',
-                        position: 'relative'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <GripVertical size={12} style={{ color: 'var(--ui-muted)', opacity: 0.6, cursor: 'grab' }} />
-                        <span>{col.header}</span>
-                      </div>
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-          </table>
-        </div>
+        {/* Mobile View Controls Selector & Column Customizer */}
+        {isMobile && (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+            padding: '16px',
+            borderBottom: '1px solid var(--ui-line-2)',
+            flexShrink: 0,
+            background: 'var(--ui-bg-2)'
+          }}>
+            <div style={{ display: 'flex', background: 'var(--ui-bg-2)', borderRadius: '12px', padding: '3px', border: '1px solid var(--ui-line)', gap: '2px' }}>
+              <button
+                type="button"
+                onClick={() => setMobileViewMode('list')}
+                style={{
+                  flex: 1,
+                  border: 0,
+                  background: mobileViewMode === 'list' ? 'var(--ui-panel-pure)' : 'transparent',
+                  color: mobileViewMode === 'list' ? 'var(--ui-primary-deep)' : 'var(--ui-muted)',
+                  padding: '8px 12px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  borderRadius: '8px',
+                  transition: 'all 0.2s',
+                  boxShadow: mobileViewMode === 'list' ? 'var(--ui-shadow-sm)' : 'none'
+                }}
+              >
+                List View
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileViewMode('detail')}
+                style={{
+                  flex: 1,
+                  border: 0,
+                  background: mobileViewMode === 'detail' ? 'var(--ui-panel-pure)' : 'transparent',
+                  color: mobileViewMode === 'detail' ? 'var(--ui-primary-deep)' : 'var(--ui-muted)',
+                  padding: '8px 12px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  borderRadius: '8px',
+                  transition: 'all 0.2s',
+                  boxShadow: mobileViewMode === 'detail' ? 'var(--ui-shadow-sm)' : 'none'
+                }}
+              >
+                Detail Cards
+              </button>
+            </div>
 
-        {/* Table Body Scroll Container */}
-        <div 
-          ref={scrollContainerRef}
-          style={{ 
-            overflowY: 'auto', 
-            flex: 1,
-            scrollbarGutter: 'stable'
-          }}
-        >
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px', tableLayout: 'fixed' }}>
-            <colgroup>
-              <col style={{ width: '48px' }} />
-              {gridColumns.filter(c => visibleColumns.includes(String(c.header))).map((_, idx) => (
-                <col key={idx} />
-              ))}
-            </colgroup>
-            
-            {/* Table Body */}
-            <tbody>
-              {filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={visibleColumns.length + 1} style={{ padding: '48px', textAlign: 'center', color: 'var(--ui-muted)' }}>
-                    No records match your query.
-                  </td>
-                </tr>
-              ) : (
-                displayedRows.map((row, rowIdx) => {
-                  const isSelected = selectedIds.includes(row.id);
-                  return (
-                    <tr
-                      key={row.id}
-                      style={{
-                        background: isSelected ? 'var(--ui-primary-soft)' : rowIdx % 2 === 0 ? 'transparent' : 'var(--ui-table-zebra)',
-                        borderBottom: '1px solid var(--ui-line-2)',
-                        transition: 'background-color 0.15s ease'
-                      }}
-                      onMouseEnter={(e) => !isSelected && (e.currentTarget.style.backgroundColor = 'var(--ui-table-hover)')}
-                      onMouseLeave={(e) => !isSelected && (e.currentTarget.style.backgroundColor = rowIdx % 2 === 0 ? 'transparent' : 'var(--ui-table-zebra)')}
-                    >
-                      {/* Checkbox Selection cell */}
-                      <td style={{ padding: '16px' }}>
+            {mobileViewMode === 'list' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px', color: 'var(--ui-text)' }}>
+                <span style={{ fontWeight: 600, color: 'var(--ui-muted)' }}>Additional field:</span>
+                <select
+                  value={mobileSelectedExtraCol}
+                  onChange={(e) => setMobileSelectedExtraCol(e.target.value)}
+                  style={{
+                    flex: 1,
+                    background: 'var(--ui-panel-pure)',
+                    border: '1px solid var(--ui-line)',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    color: 'var(--ui-text)',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {columns
+                    .filter((c, idx) => idx > 0 && c.visible !== false)
+                    .map(c => (
+                      <option key={String(c.header)} value={String(c.header)}>
+                        {c.header}
+                      </option>
+                    ))
+                  }
+                </select>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Table Header Wrapper (Non-scrollable) */}
+        {(!isMobile || mobileViewMode === 'list') && (
+          <div style={{ 
+            background: 'var(--ui-bg-2)', 
+            borderBottom: '2px solid var(--ui-line)',
+            scrollbarGutter: 'stable',
+            overflowY: 'hidden',
+            flexShrink: 0
+          }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px', tableLayout: 'fixed' }}>
+              {isMobile ? (
+                <>
+                  <colgroup>
+                    <col style={{ width: '48px' }} />
+                    <col />
+                    <col />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th style={{ padding: '16px', width: '48px' }}>
                         <input
                           type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleSelectRow(row.id)}
+                          checked={selectedIds.length === filtered.length && filtered.length > 0}
+                          onChange={toggleSelectAll}
                           style={{ accentColor: 'var(--ui-primary)', cursor: 'pointer' }}
                         />
-                      </td>
+                      </th>
+                      <th style={{ padding: '16px', fontWeight: 700, color: 'var(--ui-muted)', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.04em' }}>
+                        {columns[0].header}
+                      </th>
+                      <th style={{ padding: '16px', fontWeight: 700, color: 'var(--ui-muted)', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.04em' }}>
+                        {mobileSelectedExtraCol || 'Extra Field'}
+                      </th>
+                    </tr>
+                  </thead>
+                </>
+              ) : (
+                <>
+                  <colgroup>
+                    <col style={{ width: '48px' }} />
+                    {gridColumns.filter(c => visibleColumns.includes(String(c.header))).map((_, idx) => (
+                      <col key={idx} />
+                    ))}
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th style={{ padding: '16px', width: '48px' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.length === filtered.length && filtered.length > 0}
+                          onChange={toggleSelectAll}
+                          style={{ accentColor: 'var(--ui-primary)', cursor: 'pointer' }}
+                        />
+                      </th>
+                      {gridColumns.filter(c => visibleColumns.includes(String(c.header))).map((col, idx) => {
+                        const headerName = String(col.header);
+                        return (
+                          <th 
+                            key={idx} 
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, headerName)}
+                            onDragOver={(e) => handleDragOver(e, headerName)}
+                            onDragLeave={handleDragLeave}
+                            onDrop={(e) => handleDrop(e, headerName)}
+                            onDragEnd={handleDragEnd}
+                            style={{ 
+                              padding: density === 'relaxed' ? '16px' : '10px 16px', 
+                              fontWeight: 700, 
+                              color: 'var(--ui-muted)',
+                              textTransform: 'uppercase',
+                              fontSize: '11px',
+                              letterSpacing: '0.04em',
+                              cursor: 'grab',
+                              backgroundColor: draggedColId === headerName
+                                ? 'var(--ui-bg-3)'
+                                : dragOverColId === headerName
+                                  ? 'var(--ui-primary-soft)'
+                                  : 'transparent',
+                              transition: 'all 0.15s ease',
+                              borderLeft: dragOverColId === headerName && draggedColId !== headerName
+                                ? '2px solid var(--ui-primary)'
+                                : 'none',
+                              position: 'relative'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <GripVertical size={12} style={{ color: 'var(--ui-muted)', opacity: 0.6, cursor: 'grab' }} />
+                              <span>{col.header}</span>
+                            </div>
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  </thead>
+                </>
+              )}
+            </table>
+          </div>
+        )}
 
-                      {/* Columns mapping cells */}
-                      {gridColumns.filter(c => visibleColumns.includes(String(c.header))).map((col, colIdx) => {
+        {/* Table Body Scroll Container */}
+        {isMobile && mobileViewMode === 'detail' ? (
+          <div 
+            ref={scrollContainerRef}
+            style={{ 
+              overflowY: 'auto', 
+              flex: 1,
+              padding: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              background: 'var(--ui-bg)'
+            }}
+          >
+            {filtered.length === 0 ? (
+              <div style={{ padding: '48px', textAlign: 'center', color: 'var(--ui-muted)' }}>
+                No records match your query.
+              </div>
+            ) : (
+              displayedRows.map((row) => {
+                const isSelected = selectedIds.includes(row.id);
+                const primaryCol = columns[0];
+                const restCols = columns.filter((c, idx) => idx > 0 && visibleColumns.includes(String(c.header)));
+
+                return (
+                  <div
+                    key={row.id}
+                    style={{
+                      background: isSelected ? 'var(--ui-primary-soft)' : 'var(--ui-panel-pure)',
+                      border: isSelected ? '1px solid var(--ui-primary)' : '1px solid var(--ui-line)',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      boxShadow: 'var(--ui-shadow-sm)',
+                      transition: 'all 0.15s ease',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid var(--ui-line-2)', paddingBottom: '8px' }}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelectRow(row.id)}
+                        style={{ accentColor: 'var(--ui-primary)', cursor: 'pointer' }}
+                      />
+                      <div style={{ fontWeight: 800, fontSize: '14px', color: 'var(--ui-text)', wordBreak: 'break-word', whiteSpace: 'normal' }}>
+                        {primaryCol.cell ? primaryCol.cell(row) : String(row[primaryCol.accessorKey])}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
+                      {restCols.map((col, colIdx) => {
                         const colKey = String(col.accessorKey);
                         const isEditing = editingCell?.rowId === row.id && editingCell?.colKey === colKey;
 
                         return (
-                          <td
-                            key={colIdx}
-                            style={{ 
-                              padding: density === 'relaxed' ? '16px' : '10px 16px',
-                              fontWeight: colIdx === 0 ? 700 : 500,
-                              color: isSelected ? 'var(--ui-primary-deep)' : 'var(--ui-text)'
-                            }}
-                            onDoubleClick={() => {
-                              if (enableDoubleClickEdit) {
-                                setEditingCell({ rowId: row.id, colKey });
-                              }
-                            }}
-                          >
-                            {isEditing ? (
-                              <input
-                                defaultValue={String(row[col.accessorKey])}
-                                autoFocus
-                                onBlur={(e) => handleCellBlur(row.id, col.accessorKey, e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') handleCellBlur(row.id, col.accessorKey, e.currentTarget.value);
-                                }}
-                                style={{
-                                  width: '100%',
-                                  padding: '4px 8px',
-                                  border: '1px solid var(--ui-primary)',
-                                  background: 'var(--ui-bg)',
-                                  borderRadius: '4px',
-                                  color: 'var(--ui-text)',
-                                  fontSize: '13px'
-                                }}
-                              />
-                            ) : col.cell ? (
-                              col.cell(row)
-                            ) : (
-                              String(row[col.accessorKey])
-                            )}
-                          </td>
+                          <div key={colIdx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+                            <span style={{ fontWeight: 600, color: 'var(--ui-muted)', flexShrink: 0 }}>{col.header}</span>
+                            <div
+                              style={{ 
+                                fontWeight: 500, 
+                                color: 'var(--ui-text)',
+                                textAlign: 'right',
+                                flex: 1,
+                                display: 'flex',
+                                justifyContent: 'flex-end',
+                                wordBreak: 'break-word',
+                                whiteSpace: 'normal'
+                              }}
+                              onDoubleClick={() => {
+                                if (enableDoubleClickEdit) {
+                                  setEditingCell({ rowId: row.id, colKey });
+                                }
+                              }}
+                            >
+                              {isEditing ? (
+                                <input
+                                  defaultValue={String(row[col.accessorKey])}
+                                  autoFocus
+                                  onBlur={(e) => handleCellBlur(row.id, col.accessorKey, e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleCellBlur(row.id, col.accessorKey, e.currentTarget.value);
+                                  }}
+                                  style={{
+                                    padding: '2px 6px',
+                                    border: '1px solid var(--ui-primary)',
+                                    background: 'var(--ui-bg)',
+                                    borderRadius: '4px',
+                                    color: 'var(--ui-text)',
+                                    fontSize: '12px',
+                                    maxWidth: '150px'
+                                  }}
+                                />
+                              ) : col.cell ? (
+                                col.cell(row)
+                              ) : (
+                                String(row[col.accessorKey])
+                              )}
+                            </div>
+                          </div>
                         );
                       })}
-                    </tr>
-                  );
-                })
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        ) : (
+          <div 
+            ref={scrollContainerRef}
+            style={{ 
+              overflowY: 'auto', 
+              flex: 1,
+              scrollbarGutter: 'stable'
+            }}
+          >
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px', tableLayout: 'fixed' }}>
+              {isMobile ? (
+                <>
+                  <colgroup>
+                    <col style={{ width: '48px' }} />
+                    <col />
+                    <col />
+                  </colgroup>
+                  <tbody>
+                    {filtered.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} style={{ padding: '48px', textAlign: 'center', color: 'var(--ui-muted)' }}>
+                          No records match your query.
+                        </td>
+                      </tr>
+                    ) : (
+                      displayedRows.map((row, rowIdx) => {
+                        const isSelected = selectedIds.includes(row.id);
+                        const primaryCol = columns[0];
+                        const extraCol = columns.find(c => String(c.header) === mobileSelectedExtraCol) || columns[1];
+                        
+                        return (
+                          <tr
+                            key={row.id}
+                            style={{
+                              background: isSelected ? 'var(--ui-primary-soft)' : rowIdx % 2 === 0 ? 'transparent' : 'var(--ui-table-zebra)',
+                              borderBottom: '1px solid var(--ui-line-2)',
+                              transition: 'background-color 0.15s ease'
+                            }}
+                          >
+                            <td style={{ padding: '16px' }}>
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleSelectRow(row.id)}
+                                style={{ accentColor: 'var(--ui-primary)', cursor: 'pointer' }}
+                              />
+                            </td>
+                            <td style={{ padding: '16px', fontWeight: 700, color: isSelected ? 'var(--ui-primary-deep)' : 'var(--ui-text)', wordBreak: 'break-word', whiteSpace: 'normal' }}>
+                              {primaryCol.cell ? primaryCol.cell(row) : String(row[primaryCol.accessorKey])}
+                            </td>
+                            <td style={{ padding: '16px', fontWeight: 500, color: isSelected ? 'var(--ui-primary-deep)' : 'var(--ui-text)', wordBreak: 'break-word', whiteSpace: 'normal' }}>
+                              {extraCol.cell ? extraCol.cell(row) : String(row[extraCol.accessorKey])}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </>
+              ) : (
+                <>
+                  <colgroup>
+                    <col style={{ width: '48px' }} />
+                    {gridColumns.filter(c => visibleColumns.includes(String(c.header))).map((_, idx) => (
+                      <col key={idx} />
+                    ))}
+                  </colgroup>
+                  <tbody>
+                    {filtered.length === 0 ? (
+                      <tr>
+                        <td colSpan={visibleColumns.length + 1} style={{ padding: '48px', textAlign: 'center', color: 'var(--ui-muted)' }}>
+                          No records match your query.
+                        </td>
+                      </tr>
+                    ) : (
+                      displayedRows.map((row, rowIdx) => {
+                        const isSelected = selectedIds.includes(row.id);
+                        return (
+                          <tr
+                            key={row.id}
+                            style={{
+                              background: isSelected ? 'var(--ui-primary-soft)' : rowIdx % 2 === 0 ? 'transparent' : 'var(--ui-table-zebra)',
+                              borderBottom: '1px solid var(--ui-line-2)',
+                              transition: 'background-color 0.15s ease'
+                            }}
+                            onMouseEnter={(e) => !isSelected && (e.currentTarget.style.backgroundColor = 'var(--ui-table-hover)')}
+                            onMouseLeave={(e) => !isSelected && (e.currentTarget.style.backgroundColor = rowIdx % 2 === 0 ? 'transparent' : 'var(--ui-table-zebra)')}
+                          >
+                            <td style={{ padding: '16px' }}>
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleSelectRow(row.id)}
+                                style={{ accentColor: 'var(--ui-primary)', cursor: 'pointer' }}
+                              />
+                            </td>
+                            {gridColumns.filter(c => visibleColumns.includes(String(c.header))).map((col, colIdx) => {
+                              const colKey = String(col.accessorKey);
+                              const isEditing = editingCell?.rowId === row.id && editingCell?.colKey === colKey;
+
+                              return (
+                                <td
+                                  key={colIdx}
+                                  style={{ 
+                                    padding: density === 'relaxed' ? '16px' : '10px 16px',
+                                    fontWeight: colIdx === 0 ? 700 : 500,
+                                    color: isSelected ? 'var(--ui-primary-deep)' : 'var(--ui-text)'
+                                  }}
+                                  onDoubleClick={() => {
+                                    if (enableDoubleClickEdit) {
+                                      setEditingCell({ rowId: row.id, colKey });
+                                    }
+                                  }}
+                                >
+                                  {isEditing ? (
+                                    <input
+                                      defaultValue={String(row[col.accessorKey])}
+                                      autoFocus
+                                      onBlur={(e) => handleCellBlur(row.id, col.accessorKey, e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleCellBlur(row.id, col.accessorKey, e.currentTarget.value);
+                                      }}
+                                      style={{
+                                        width: '100%',
+                                        padding: '4px 8px',
+                                        border: '1px solid var(--ui-primary)',
+                                        background: 'var(--ui-bg)',
+                                        borderRadius: '4px',
+                                        color: 'var(--ui-text)',
+                                        fontSize: '13px'
+                                      }}
+                                    />
+                                  ) : col.cell ? (
+                                    col.cell(row)
+                                  ) : (
+                                    String(row[col.accessorKey])
+                                  )}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </>
               )}
-            </tbody>
-          </table>
-        </div>
+            </table>
+          </div>
+        )}
 
       {/* 4. PAGINATION FOOTER */}
       {showPagination && (
