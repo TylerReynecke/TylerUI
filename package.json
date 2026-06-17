@@ -9,7 +9,8 @@
     ".": {
       "import": "./src/library/index.ts",
       "types": "./src/library/index.ts"
-    }
+    },
+    "./src/index.css": "./src/index.css"
   },
   "scripts": {
     "dev": "vite",

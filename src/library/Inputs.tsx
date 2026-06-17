@@ -105,12 +105,12 @@ export const Textarea: React.FC<TextareaProps> = ({
 };
 
 // --- 2.3 PASSWORD INPUT (with CapsLock and Strength Meter) ---
-export const PasswordInput: React.FC<TextInputProps> = ({ label, ...props }) => {
+export const PasswordInput: React.FC<TextInputProps> = ({ label, value, onChange, ...props }) => {
   const [show, setShow] = useState(false);
   const [focused, setFocused] = useState(false);
   const [capsLock, setCapsLock] = useState(false);
   const [strength, setStrength] = useState(0); // 0 to 4
-  const [pwVal, setPwVal] = useState('');
+  const [pwVal, setPwVal] = useState(String(value || ''));
 
   const checkStrength = (val: string) => {
     let score = 0;
@@ -120,6 +120,12 @@ export const PasswordInput: React.FC<TextInputProps> = ({ label, ...props }) => 
     if (/[^A-Za-z0-9]/.test(val)) score++;
     setStrength(score);
   };
+
+  useEffect(() => {
+    const val = String(value || '');
+    setPwVal(val);
+    checkStrength(val);
+  }, [value]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.getModifierState('CapsLock')) {
@@ -143,7 +149,7 @@ export const PasswordInput: React.FC<TextInputProps> = ({ label, ...props }) => 
           onChange={(e) => {
             setPwVal(e.target.value);
             checkStrength(e.target.value);
-            props.onChange?.(e);
+            onChange?.(e);
           }}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
